@@ -1,0 +1,23 @@
+{
+  "name": "cloudflare-exchange-frontend",
+  "version": "1.0.0",
+  "description": "Exchange frontend for Cloudflare deployment",
+  "main": "index.html",
+  "scripts": {
+    "dev": "wrangler pages dev ./public --compatibility-date=2023-12-01",
+    "build": "echo 'No build step required for static site'",
+    "preview": "wrangler pages dev ./public --compatibility-date=2023-12-01",
+    "deploy": "echo 'Deploy via Cloudflare Dashboard'"
+  },
+  "keywords": [
+    "cloudflare",
+    "exchange",
+    "crypto",
+    "payment"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
