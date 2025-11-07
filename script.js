@@ -41,7 +41,7 @@ if (exchangeForm) {
         const payload = { sendCoin, sendAmount, usdValue, receiveWallet, description: `Exchange ${sendAmount} ${sendCoin}` };
 
         try {
-            const resp = await fetch('/api/create-payment', {
+            const resp = await fetch('https://onncx.com/api/create-payment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
