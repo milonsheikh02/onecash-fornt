@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQ — CCE ⚡ CASH</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --gold: #FFD700;
+    --gold-glow: #ffea70;
+    --dark-bg: #0f1724;
+    --dark-card: rgba(255, 255, 255, 0.05);
+    --dark-text: #e2e8f0;
+    --dark-secondary: #cbd5e1;
+
+    --light-bg: #f9fafb;
+    --light-card: #fff;
+    --light-text: #111827;
+    --light-secondary: #374151;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: var(--dark-bg);
+    color: var(--dark-text);
+    transition: all 0.3s ease;
+}
+
+body.light {
+    background: var(--light-bg);
+    color: var(--light-text);
+}
+
+/* Header */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background-color: rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+}
+
+body.light header {
+    background-color: rgba(255,255,255,0.8);
+}
+
+.logo {
+    font-size: 1.9em;
+    font-weight: 700;
+    color: var(--gold);
+    text-shadow: 0 0 10px var(--gold);
+}
+
+nav {
+    display: flex;
+    align-items: center;
+}
+
+nav a {
+    margin-left: 25px;
+    text-decoration: none;
+    color: var(--gold);
+    font-weight: 500;
+    position: relative;
+    transition: color 0.3s, text-shadow 0.3s;
+}
+
+nav a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    background: var(--gold);
+    left: 0;
+    bottom: -4px;
+    transition: width 0.3s ease;
+}
+
+nav a:hover {
+    color: #fff;
+    text-shadow: 0 0 8px var(--gold-glow);
+}
+
+nav a:hover::after {
+    width: 100%;
+}
+
+.theme-toggle {
+    margin-left: 25px;
+    background: var(--gold);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+    background: var(--gold-glow);
+}
+
+/* Title */
+h1 {
+    text-align: center;
+    padding: 50px 20px 20px;
+    color: var(--gold);
+    font-size: 2.7em;
+    text-shadow: 0 0 12px var(--gold);
+}
+
+/* FAQ Section */
+.faq-container {
+    max-width: 900px;
+    margin: 0 auto 60px;
+    padding: 20px;
+}
+
+details {
+    background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 15px;
+    padding: 20px 25px;
+    margin-bottom: 18px;
+    transition: all 0.4s ease;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(255,215,0,0.1);
+    overflow: hidden;
+    backdrop-filter: blur(6px);
+}
+
+body.light details {
+    background: var(--light-card);
+    border: 1px solid #ddd;
+    box-shadow: 0 0 10px rgba(255,215,0,0.15);
+}
+
+details:hover {
+    transform: translateY(-4px);
+    border-color: var(--gold);
+    box-shadow: 0 0 20px rgba(255,215,0,0.4);
+}
+
+summary {
+    font-weight: 700;
+    font-size: 1.2em;
+    position: relative;
+    padding-left: 35px;
+}
+
+summary::before {
+    content: "▶";
+    position: absolute;
+    left: 0;
+    color: var(--gold);
+    font-size: 1.2em;
+    transition: transform 0.3s;
+}
+
+details[open] summary::before {
+    transform: rotate(90deg);
+}
+
+details[open] summary {
+    color: var(--gold);
+    text-shadow: 0 0 10px var(--gold);
+}
+
+details p, details ol {
+    margin-top: 10px;
+    font-size: 1em;
+    color: var(--dark-secondary);
+    line-height: 1.6em;
+}
+
+details[open] > *:not(summary) {
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {opacity: 0; transform: translateY(10px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 25px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    color: var(--gold);
+    font-size: 0.95em;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(8px);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    nav {
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+    h1 {
+        font-size: 2em;
+    }
+    nav a {
+        margin-left: 15px;
+        margin-top: 5px;
+    }
+    .theme-toggle {
+        margin-left: 15px;
+        margin-top: 5px;
+    }
+}
+</style>
+</head>
+<body>
+
+<header>
+    <div class="logo">CCE ⚡ CASH</div>
+    <nav>
+        <a href="#">Home</a>
+        <a href="#">FAQ</a>
+        <a href="#">Privacy</a>
+        <a href="#">Support</a>
+        <button class="theme-toggle" onclick="toggleTheme()">☀ / 🌙</button>
+    </nav>
+</header>
+
+<h1>CCE Cash FAQ</h1>
+<div class="faq-container">
+
+    <details>
+        <summary>What is CCE Cash?</summary>
+        <p>CCE Cash is a simple and fast instant cryptocurrency exchange service. You don't need to register and there are no restrictions on your redemption. We can quickly convert multiple tokens for you without any additional or hidden fees.</p>
+    </details>
+
+    <details>
+        <summary>How does it work?</summary>
+        <p>CCE Cash integrates into multiple cryptocurrency exchanges, including Binance, Bitfinex, and Okx. We select the best exchange rate at any given moment and provide it to you instantly.</p>
+    </details>
+
+    <details>
+        <summary>Why trust us?</summary>
+        <p>No registration, no KYC — the entire process is simple, convenient, safe and very fast.</p>
+    </details>
+
+    <details>
+        <summary>How to exchange?</summary>
+        <p>You create a transaction, deposit within 30 minutes, and receive the exact amount shown to you at the locked rate.</p>
+    </details>
+
+</div>
+
+<footer>
+    © 2025 CCE ⚡ CASH — Secure • Fast • No KYC
+</footer>
+
+<script>
+function toggleTheme() {
+    document.body.classList.toggle('light');
+}
+</script>
+
+</body>
+</html>
