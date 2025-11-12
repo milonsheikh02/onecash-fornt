@@ -1,0 +1,18 @@
+name = "onecash-payment-worker"
+main = "index.js"
+compatibility_date = "2023-10-01"
+
+[vars]
+API_KEY = "CQVCKV8-N9ZM00R-J1R4F3H-3WW8D8N"
+WEBHOOK_URL = "https://hook.eu2.make.com/3DGENEqiuxGMmYaB35alKsswjYlnIhlF"
+
+# Uncomment and configure if you want to use KV storage for orders
+# [[kv_namespaces]]
+# binding = "ORDER_KV"
+# id = "your-kv-namespace-id"
+
+# Uncomment and configure if you want to use D1 database for orders
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "onecash-orders"
+# database_id = "your-d1-database-id"
