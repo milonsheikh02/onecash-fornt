@@ -144,7 +144,9 @@
             status: 'pending'
         };
 
+        // If no order ID, we should show an error or redirect
         if (!orderId) {
+            console.warn('No order ID provided in URL');
             // Use mock data for local preview
             populatePaymentDetails(mockOrder);
         }
@@ -153,40 +155,75 @@
         async function loadPaymentDetails() {
             try {
                 // Check if we're in local development and have mock data
-                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                const isLocal = window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1' || 
+                               window.location.hostname === '0.0.0.0' ||
+                               window.location.hostname.includes('local') ||
+                               window.location.hostname.includes('preview');
+                
+                // Debugging: Log the hostname and isLocal status
+                console.log('Payment page hostname:', window.location.hostname);
+                console.log('Payment page isLocal:', isLocal);
+                console.log('Order ID from URL:', orderId);
                 
                 if (isLocal) {
                     // Try to get mock order data from sessionStorage
                     const storedMockOrder = sessionStorage.getItem('mockOrder');
+                    console.log('Stored mock order:', storedMockOrder);
                     if (storedMockOrder) {
                         const order = JSON.parse(storedMockOrder);
+                        // Clear the sessionStorage after retrieving the data
+                        sessionStorage.removeItem('mockOrder');
                         populatePaymentDetails(order);
                         return;
                     }
                 }
                 
-                // Use direct Cloudflare Worker API endpoint since we have separate repositories
-                // Use the configured worker URL
-                const workerUrl = window.CONFIG.WORKER_URL;
-                const apiPath = '/api/order/';
-                const response = await fetch(`${workerUrl}${apiPath}${orderId}`);
-                
-                // Check if response is OK
-                if (!response.ok) {
-                    console.error('API Error:', response.status, response.statusText);
-                    // Use mock data for local preview
-                    populatePaymentDetails(mockOrder);
-                    return;
-                }
-                
-                const data = await response.json();
+                // If we have an order ID, try to fetch from the API
+                if (orderId) {
+                    try {
+                        // Use direct Cloudflare Worker API endpoint since we have separate repositories
+                        // Use the configured worker URL
+                        const workerUrl = window.CONFIG.WORKER_URL.replace(/\/$/, '');
+                        const apiPath = '/api/order/';
+                        const fetchUrl = `${workerUrl}${apiPath}${orderId}`;
+                        console.log('Fetching order from:', fetchUrl);
+                        console.log('Worker URL:', workerUrl);
+                        console.log('Order ID:', orderId);
+                        const response = await fetch(fetchUrl);
+                        
+                        // Check if response is OK
+                        console.log('Order fetch response status:', response.status);
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('API Error:', response.status, response.statusText, errorText);
+                            // Use mock data for local preview
+                            populatePaymentDetails(mockOrder);
+                            return;
+                        }
+                        
+                        const data = await response.json();
+                        console.log('Order fetch response data:', data);
 
-                if (data.success) {
-                    populatePaymentDetails(data.order);
-                } else {
-                    // Use mock data if API call fails
-                    populatePaymentDetails(mockOrder);
+                        if (data.success) {
+                            populatePaymentDetails(data.order);
+                            return;
+                        } else {
+                            console.error('API returned error:', data.error);
+                            // Use mock data if API returns an error
+                            populatePaymentDetails(mockOrder);
+                            return;
+                        }
+                    } catch (fetchError) {
+                        console.error('Fetch error:', fetchError);
+                        // Use mock data if fetch fails
+                        populatePaymentDetails(mockOrder);
+                        return;
+                    }
                 }
+                
+                // Use mock data if no order ID or API call fails
+                populatePaymentDetails(mockOrder);
             } catch (error) {
                 console.error('Error loading payment details:', error);
                 // Use mock data if API call fails
@@ -270,7 +307,11 @@
             const poll = async () => {
                 try {
                     // Check if we're in local development
-                    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                    const isLocal = window.location.hostname === 'localhost' || 
+                                   window.location.hostname === '127.0.0.1' || 
+                                   window.location.hostname === '0.0.0.0' ||
+                                   window.location.hostname.includes('local') ||
+                                   window.location.hostname.includes('preview');
                     
                     if (isLocal) {
                         // For local preview, we'll just simulate status changes

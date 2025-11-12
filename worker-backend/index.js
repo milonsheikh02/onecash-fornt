@@ -6,8 +6,9 @@ const WEBHOOK_URL = 'https://hook.eu2.make.com/3DGENEqiuxGMmYaB35alKsswjYlnIhlF'
 // CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Max-Age': '86400',
 };
 
 // Handle CORS preflight requests
@@ -129,26 +130,36 @@ async function getOrder(request, env, orderId) {
   // For this demo, we'll return a mock order
   // In a production system, you would use env.ORDER_KV or env.DB to retrieve the order
   
-  // Mock order data - in a real system, this would come from storage
-  const mockOrder = {
-    order_id: orderId,
-    amount: 0.1,
-    coin: 'BTC',
-    usd_value: 5000,
-    receive_method: 'USDT-TRC20',
-    receive_wallet: 'TABC1234567890XYZ',
-    payment_address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
-    status: 'pending', // This would be updated based on payment verification
-    created_at: new Date().toISOString(),
-    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
-  };
-  
-  return new Response(JSON.stringify({
-    success: true,
-    order: mockOrder
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  });
+  try {
+    // Mock order data - in a real system, this would come from storage
+    const mockOrder = {
+      order_id: orderId,
+      amount: 0.1,
+      coin: 'BTC',
+      usd_value: 5000,
+      receive_method: 'USDT-TRC20',
+      receive_wallet: 'TABC1234567890XYZ',
+      payment_address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
+      status: 'pending', // This would be updated based on payment verification
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
+    };
+    
+    return new Response(JSON.stringify({
+      success: true,
+      order: mockOrder
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Failed to retrieve order: ' + error.message
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
 }
 
 // Update order status
@@ -203,20 +214,40 @@ export default {
     const path = url.pathname;
     
     // Route handling
+    console.log('Request method:', request.method);
+    console.log('Request path:', path);
+    console.log('Path length:', path.length);
+    console.log('Path parts:', path.split('/'));
+    
     if (request.method === 'GET' && path === '/health') {
+      console.log('Matched GET /health route');
       return handleHealthCheck();
+    } else if (request.method === 'GET' && path === '/test') {
+      console.log('Matched GET /test route');
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Test endpoint working'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     } else if (request.method === 'POST' && path === '/api/order') {
+      console.log('Matched POST /api/order route');
       return createOrder(request);
     } else if (request.method === 'GET' && path.startsWith('/api/order/')) {
-      const orderId = path.split('/')[3];
+      const pathParts = path.split('/');
+      const orderId = pathParts[3];
+      console.log('Matched GET /api/order/ route, pathParts:', pathParts, 'orderId:', orderId);
       return getOrder(request, env, orderId);
     } else if (request.method === 'PUT' && path.startsWith('/api/order/')) {
-      const orderId = path.split('/')[3];
+      const pathParts = path.split('/');
+      const orderId = pathParts[3];
+      console.log('Matched PUT /api/order/ route, pathParts:', pathParts, 'orderId:', orderId);
       return updateOrderStatus(request, env, orderId);
     } else {
+      console.log('No route matched');
       return new Response(JSON.stringify({
         success: false,
-        error: 'Route not found'
+        error: 'Route not found: ' + request.method + ' ' + path
       }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

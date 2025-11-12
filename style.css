@@ -118,6 +118,12 @@ body {
     font-size: 32px;
 }
 
+#exchangeForm {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
 .form-group {
     margin-bottom: 25px;
 }
@@ -813,7 +819,6 @@ body {
         font-size: 16px;
     }
 
-    .exchange-box,
     .payment-box {
         padding: 25px;
         margin: 0 10px;
@@ -925,9 +930,7 @@ body {
         font-size: 20px;
     }
     
-    .container {
-        padding: 0 10px;
-    }
+    
 }
 
 /* FAQ Page Styles */
@@ -1265,12 +1268,6 @@ body {
 }
 
 /* Additional security measures completely removed as per user request */
-* {
-    -webkit-user-select: auto;
-    -moz-user-select: auto;
-    -ms-user-select: auto;
-    user-select: auto;
-}
 
 /* Allow image dragging */
 img {
