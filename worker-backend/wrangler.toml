@@ -5,6 +5,9 @@ compatibility_date = "2023-10-01"
 [vars]
 API_KEY = "CQVCKV8-N9ZM00R-J1R4F3H-3WW8D8N"
 WEBHOOK_URL = "https://hook.eu2.make.com/3DGENEqiuxGMmYaB35alKsswjYlnIhlF"
+ETHERSCAN_API_KEY = "PGMJTCIY14W8IT81NYR557NIDDUUU9Z5C1"
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "securepassword123"
 
 # Uncomment and configure if you want to use KV storage for orders
 # [[kv_namespaces]]
