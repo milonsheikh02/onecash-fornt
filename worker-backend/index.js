@@ -1,10 +1,10 @@
 // Cloudflare Worker for ONE⚡CASH Payment Processing
 // Etherscan API Key (you'll need to get your own from etherscan.io)
-const ETHERSCAN_API_KEY = 'PGMJTCIY14W8IT81NYR557NIDDUUU9Z5C1';
+const ETHERSCAN_API_KEY = typeof env !== 'undefined' && env.ETHERSCAN_API_KEY ? env.ETHERSCAN_API_KEY : 'PGMJTCIY14W8IT81NYR557NIDDUUU9Z5C1';
 
 // Admin credentials (stored as secrets)
-let ADMIN_USERNAME = 'admin';
-let ADMIN_PASSWORD = 'password123';
+let ADMIN_USERNAME = typeof env !== 'undefined' && env.ADMIN_USERNAME ? env.ADMIN_USERNAME : 'admin';
+let ADMIN_PASSWORD = typeof env !== 'undefined' && env.ADMIN_PASSWORD ? env.ADMIN_PASSWORD : 'password123';
 
 // CORS headers
 const corsHeaders = {
@@ -155,9 +155,10 @@ async function checkBitcoinTransactions(address) {
 }
 
 // Check Ethereum transactions for a specific address
-async function checkEthereumTransactions(address, startBlock = 0) {
+async function checkEthereumTransactions(address, startBlock = 0, env) {
   try {
-    const url = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=${startBlock}&endblock=99999999&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
+    const apiKey = typeof env !== 'undefined' && env.ETHERSCAN_API_KEY ? env.ETHERSCAN_API_KEY : ETHERSCAN_API_KEY;
+    const url = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=${startBlock}&endblock=99999999&sort=asc&apikey=${apiKey}`;
     
     const response = await fetch(url);
     const data = await response.json();
@@ -512,7 +513,7 @@ export default {
       if (order.send_network === 'BTC') {
         transactions = await checkBitcoinTransactions(order.deposit_address);
       } else if (order.send_network === 'ETH') {
-        transactions = await checkEthereumTransactions(order.deposit_address);
+        transactions = await checkEthereumTransactions(order.deposit_address, 0, env);
       } else if (order.send_network === 'TRX') {
         transactions = await checkTronTransactions(order.deposit_address);
       }
@@ -553,8 +554,8 @@ export default {
       const [username, password] = credentials.split(':');
       
       // Check credentials
-      const adminUsername = ADMIN_USERNAME;
-      const adminPassword = ADMIN_PASSWORD;
+      const adminUsername = typeof env !== 'undefined' && env.ADMIN_USERNAME ? env.ADMIN_USERNAME : ADMIN_USERNAME;
+      const adminPassword = typeof env !== 'undefined' && env.ADMIN_PASSWORD ? env.ADMIN_PASSWORD : ADMIN_PASSWORD;
       
       if (username !== adminUsername || password !== adminPassword) {
         return new Response('Unauthorized', {
@@ -593,8 +594,8 @@ export default {
       const [username, password] = credentials.split(':');
       
       // Check credentials
-      const adminUsername = ADMIN_USERNAME;
-      const adminPassword = ADMIN_PASSWORD;
+      const adminUsername = typeof env !== 'undefined' && env.ADMIN_USERNAME ? env.ADMIN_USERNAME : ADMIN_USERNAME;
+      const adminPassword = typeof env !== 'undefined' && env.ADMIN_PASSWORD ? env.ADMIN_PASSWORD : ADMIN_PASSWORD;
       
       if (username !== adminUsername || password !== adminPassword) {
         return new Response('Unauthorized', {
@@ -606,10 +607,266 @@ export default {
         });
       }
       
-      // In a real implementation, you would serve the admin.html file
-      // For this demo, we'll return a simple response
-      return new Response('Admin panel endpoint - in production, this would serve the admin.html file', {
-        headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+      // Serve the admin.html file
+      // In production, you would read this from a file or serve from a static asset
+      const adminHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONE⚡CASH Admin Panel</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .admin-header {
+            background-color: #333;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .admin-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status-paid {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-completed {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .logout-btn {
+            float: right;
+            background-color: #dc3545;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>ONE⚡CASH Admin Panel</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+        
+        <div class="admin-content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalOrders">0</div>
+                    <div class="stat-label">Total Orders</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="pendingOrders">0</div>
+                    <div class="stat-label">Pending Orders</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="completedOrders">0</div>
+                    <div class="stat-label">Completed Orders</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalRevenue">0</div>
+                    <div class="stat-label">Total Revenue (USDT)</div>
+                </div>
+            </div>
+            
+            <h2>Recent Orders</h2>
+            <table id="ordersTable">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Date</th>
+                        <th>Send Coin</th>
+                        <th>Send Amount</th>
+                        <th>Receive Amount</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Orders will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Check if user is authenticated
+        function checkAuth() {
+            // In a real implementation, you would check authentication status
+            // For now, we'll assume the user is authenticated if they can access this page
+        }
+
+        // Logout function
+        function logout() {
+            // Clear any authentication tokens
+            // Redirect to login page
+            window.location.href = '/';
+        }
+
+        // Fetch admin data
+        async function fetchAdminData() {
+            try {
+                const response = await fetch('/api/admin/data', {
+                    headers: {
+                        'Authorization': 'Basic ' + btoa('admin:password123') // Default credentials
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateAdminPanel(data.data);
+                } else if (response.status === 401) {
+                    // Redirect to login if not authenticated
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error fetching admin data:', error);
+            }
+        }
+
+        // Update admin panel with data
+        function updateAdminPanel(data) {
+            // Update stats
+            document.getElementById('totalOrders').textContent = data.orders.length;
+            
+            const pendingOrders = data.orders.filter(order => order.status === 'pending').length;
+            document.getElementById('pendingOrders').textContent = pendingOrders;
+            
+            const completedOrders = data.orders.filter(order => order.status === 'completed').length;
+            document.getElementById('completedOrders').textContent = completedOrders;
+            
+            const totalRevenue = data.orders
+                .filter(order => order.status === 'completed')
+                .reduce((sum, order) => sum + order.receive_amount, 0);
+            document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2);
+            
+            // Update orders table
+            const tbody = document.querySelector('#ordersTable tbody');
+            tbody.innerHTML = '';
+            
+            // Show last 10 orders
+            const recentOrders = data.orders.slice(-10).reverse();
+            
+            recentOrders.forEach(order => {
+                const row = document.createElement('tr');
+                row.innerHTML = '\n                    <td>' + order.order_id + '</td>\n                    <td>' + new Date(order.created_at).toLocaleDateString() + '</td>\n                    <td>' + order.send_network + '</td>\n                    <td>' + order.send_amount + '</td>\n                    <td>' + order.receive_amount.toFixed(2) + ' USDT</td>\n                    <td><span class="status-badge status-' + order.status + '">' + order.status + '</span></td>\n                    <td>\n                        <button class="action-btn btn-primary" onclick="viewOrder(\'' + order.order_id + '\')">View</button>\n                        ' + (order.status === 'pending' ? \n                            '<button class="action-btn btn-success" onclick="markAsPaid(\'' + order.order_id + '\')">Mark Paid</button>' : \n                            '') + '\n                    </td>\n                ';
+                tbody.appendChild(row);
+            });
+        }
+
+        // View order details
+        function viewOrder(orderId) {
+            alert('View order details for: ' + orderId);
+            // In a real implementation, you would show order details in a modal or redirect to order page
+        }
+
+        // Mark order as paid
+        function markAsPaid(orderId) {
+            if (confirm('Mark order ' + orderId + ' as paid?')) {
+                // In a real implementation, you would make an API call to update the order status
+                alert('Order marked as paid');
+                // Refresh the data
+                fetchAdminData();
+            }
+        }
+
+        // Initialize admin panel
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            fetchAdminData();
+        });
+    </script>
+</body>
+</html>`;
+      return new Response(adminHtml, {
+        headers: { ...corsHeaders, 'Content-Type': 'text/html' }
       });
     } else {
       console.log('No route matched');
