@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Details - ONE⚡CASH</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Additional styles specific to order page */
+        .order-section {
+            padding: 60px 20px;
+        }
+
+        .order-box {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .order-box h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #667eea;
+            font-size: 32px;
+        }
+
+        .order-details {
+            margin-bottom: 30px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .detail-value {
+            font-weight: 500;
+            color: #666;
+            text-align: right;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-paid {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-completed {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-expired {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .order-box {
+                padding: 25px;
+                margin: 0 15px;
+            }
+            
+            .detail-row {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .detail-value {
+                text-align: left;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <h1>ONE⚡CASH</h1>
+            </div>
+            <nav class="nav">
+                <a href="index.html">Home</a>
+                <a href="faq.html">FAQ</a>
+                <a href="privacy.html">Privacy</a>
+                <a href="support.html">Support</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Order Details</h1>
+            <p>View and manage your exchange order</p>
+        </div>
+    </section>
+
+    <!-- Order Details Section -->
+    <section class="order-section">
+        <div class="container">
+            <div class="order-box">
+                <h2>Order Information</h2>
+                
+                <div class="order-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Order ID:</span>
+                        <span class="detail-value" id="orderId">Loading...</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value">
+                            <span class="status-badge status-pending" id="orderStatus">Pending</span>
+                        </span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">Date Created:</span>
+                        <span class="detail-value" id="orderDate">Loading...</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">You Send:</span>
+                        <span class="detail-value">
+                            <span id="sendAmount">0.00</span> 
+                            <span id="sendCoin">COIN</span>
+                        </span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">You Receive:</span>
+                        <span class="detail-value">
+                            <span id="receiveAmount">0.00</span> 
+                            <span id="receiveCoin">USDT</span>
+                        </span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">Deposit Address:</span>
+                        <span class="detail-value" id="depositAddress">Loading...</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">Receive Wallet:</span>
+                        <span class="detail-value" id="receiveWallet">Loading...</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">Network:</span>
+                        <span class="detail-value" id="networkInfo">Loading...</span>
+                    </div>
+                </div>
+                
+                <div class="actions">
+                    <button class="btn btn-primary" id="refreshBtn">Refresh Status</button>
+                    <button class="btn btn-secondary" id="paymentBtn">View Payment Instructions</button>
+                    <button class="btn btn-success" id="completeBtn" style="display: none;">Complete Exchange</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2>Why Choose ONE⚡CASH?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Fast</h3>
+                    <p>Automated matching to deliver the best market price quickly.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h3>Low Fees</h3>
+                    <p>Transparent fee structure with occasional discounts.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Anonymous</h3>
+                    <p>No account required — exchange by sending to the generated address.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h3>ONE⚡CASH</h3>
+                    <p>© 2018–2024 CCE Cash. All rights reserved.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Popular</h4>
+                    <ul>
+                        <li><a href="index.html#exchange">USDT-TRC20 to USDT-ERC20</a></li>
+                        <li><a href="index.html#exchange">USDT-TRC20 to ETH</a></li>
+                        <li><a href="index.html#exchange">USDT-ERC20 to ETH</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Legal & Support</h4>
+                    <ul>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                        <li><a href="privacy.html">Privacy Policy</a></li>
+                        <li><a href="support.html">Support</a></li>
+                        <li><a href="faq.html">FAQ</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Get order ID from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('id');
+        
+        // DOM elements
+        const orderIdEl = document.getElementById('orderId');
+        const orderStatusEl = document.getElementById('orderStatus');
+        const orderDateEl = document.getElementById('orderDate');
+        const sendAmountEl = document.getElementById('sendAmount');
+        const sendCoinEl = document.getElementById('sendCoin');
+        const receiveAmountEl = document.getElementById('receiveAmount');
+        const receiveCoinEl = document.getElementById('receiveCoin');
+        const depositAddressEl = document.getElementById('depositAddress');
+        const receiveWalletEl = document.getElementById('receiveWallet');
+        const networkInfoEl = document.getElementById('networkInfo');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const paymentBtn = document.getElementById('paymentBtn');
+        const completeBtn = document.getElementById('completeBtn');
+        
+        // Check if we're in local development
+        const isLocal = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1' || 
+                       window.location.hostname === '0.0.0.0' ||
+                       window.location.hostname.includes('local') ||
+                       window.location.hostname.includes('preview');
+        
+        // Use local API endpoint if in development, otherwise use production
+        const apiBaseUrl = isLocal ? 'http://localhost:8787' : 'https://api.onncx.com';
+        
+        // Initialize page
+        async function init() {
+            if (!orderId) {
+                alert('No order ID provided');
+                return;
+            }
+            
+            orderIdEl.textContent = orderId;
+            
+            // Fetch order details
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/order/${orderId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const order = data.order;
+                    
+                    // Update UI with order details
+                    orderDateEl.textContent = new Date(order.created_at).toLocaleString();
+                    sendAmountEl.textContent = order.send_amount.toFixed(6);
+                    sendCoinEl.textContent = order.send_network;
+                    receiveAmountEl.textContent = order.receive_amount.toFixed(2);
+                    receiveCoinEl.textContent = order.receive_network;
+                    depositAddressEl.textContent = order.deposit_address;
+                    receiveWalletEl.textContent = order.receive_wallet;
+                    
+                    // Set network info
+                    const networkInfo = {
+                        'BTC': 'Bitcoin Network',
+                        'ETH': 'Ethereum Network',
+                        'TRX': 'Tron Network'
+                    };
+                    networkInfoEl.textContent = networkInfo[order.send_network] || 'Unknown Network';
+                    
+                    // Update status badge
+                    updateStatusBadge(order.status);
+                } else {
+                    alert('Error loading order: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error fetching order:', error);
+                alert('Error loading order details');
+            }
+        }
+        
+        // Update status badge
+        function updateStatusBadge(status) {
+            // Clear all status classes
+            orderStatusEl.className = 'status-badge';
+            
+            // Add appropriate status class
+            switch (status) {
+                case 'pending':
+                    orderStatusEl.classList.add('status-pending');
+                    orderStatusEl.textContent = 'Pending';
+                    break;
+                case 'paid':
+                    orderStatusEl.classList.add('status-paid');
+                    orderStatusEl.textContent = 'Paid';
+                    completeBtn.style.display = 'inline-block';
+                    break;
+                case 'completed':
+                    orderStatusEl.classList.add('status-completed');
+                    orderStatusEl.textContent = 'Completed';
+                    break;
+                case 'expired':
+                    orderStatusEl.classList.add('status-expired');
+                    orderStatusEl.textContent = 'Expired';
+                    break;
+                default:
+                    orderStatusEl.classList.add('status-pending');
+                    orderStatusEl.textContent = status;
+            }
+        }
+        
+        // Refresh order status
+        refreshBtn.addEventListener('click', async () => {
+            if (!orderId) return;
+            
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/order/${orderId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const order = data.order;
+                    updateStatusBadge(order.status);
+                    alert('Order status refreshed successfully!');
+                } else {
+                    alert('Error refreshing order: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error refreshing order:', error);
+                alert('Error refreshing order status');
+            }
+        });
+        
+        // View payment instructions
+        paymentBtn.addEventListener('click', () => {
+            if (orderId) {
+                window.location.href = `payment.html?order_id=${orderId}`;
+            }
+        });
+        
+        // Complete exchange
+        completeBtn.addEventListener('click', () => {
+            alert('Exchange completed successfully! Your USDT will be sent to your wallet shortly.');
+            window.location.href = '/';
+        });
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+    <script src="web3-wallet.js"></script>
+</body>
+</html>

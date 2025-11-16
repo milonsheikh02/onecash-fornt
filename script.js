@@ -2,10 +2,9 @@
 
 // Exchange rates (mock values - in a real system, these would come from an API)
 const exchangeRates = {
-  'BTC': 50000,
-  'ETH': 3000,
-  'TRX': 0.1,
-  'BNB': 400
+  'BTC': 143491.50,  // 1 BTC = 143,491.50 USDT
+  'ETH': 4741.38,    // 1 ETH = 4,741.38 USDT
+  'TRX': 0.29548     // 1 TRX = 0.29548 USDT
 };
 
 // DOM Elements
@@ -40,7 +39,9 @@ async function handleFormSubmit(event) {
     sendCoin: sendCoinSelect.value,
     sendAmount: sendAmountInput.value,
     receiveMethod: document.getElementById('receiveMethod').value,
-    receiveWallet: document.getElementById('receiveWallet').value
+    receiveWallet: document.getElementById('receiveWallet').value,
+    // In a real implementation, you would associate this with a user session
+    userId: 'USER_' + Date.now() // Temporary user ID for demo
   };
   
   // Validate form
@@ -74,14 +75,15 @@ async function handleFormSubmit(event) {
     
     if (isLocal) {
       // Generate mock order data for local development
+      const orderId = 'ORD' + Date.now() + Math.random().toString(36).substr(2, 5).toUpperCase();
       const mockOrder = {
-        order_id: 'ORD' + Date.now() + Math.random().toString(36).substr(2, 5).toUpperCase(),
+        order_id: orderId,
         amount: parseFloat(formData.sendAmount),
         coin: formData.sendCoin,
         usd_value: parseFloat(formData.sendAmount) * exchangeRates[formData.sendCoin],
         receive_method: formData.receiveMethod,
         receive_wallet: formData.receiveWallet,
-        payment_address: generateMockAddress(formData.sendCoin),
+        payment_address: generateMockAddress(formData.sendCoin, orderId),
         status: 'pending'
       };
       
@@ -143,27 +145,60 @@ async function handleFormSubmit(event) {
   }
 }
 
-// Generate a mock payment address for local development
-function generateMockAddress(coin) {
+// Generate a mock payment address (HD wallet style - derived from main wallet)
+function generateMockAddress(coin, orderId) {
+  // In local development, we'll generate a deterministic address
+  // This simulates the HD wallet generation on the backend
+  const mainWallets = window.CONFIG.MAIN_WALLETS || {
+    'BTC': 'bc1qk263esw8mxpcmmml0mus7nfnscp9fryyqqzgwq',
+    'ETH': '0x2bb183CC12315a2acd0bfA89e815E1fC2C58815B',
+    'TRX': 'TUop15AqkgbB7uXjiHDp1XDpDfBJEQUB7w'
+  };
+  
+  const mainWallet = mainWallets[coin] || '0x0000000000000000000000000000000000000000';
+  
+  // Simple deterministic address generation (similar to backend)
   const prefixes = {
-    'BTC': '1',
+    'BTC': 'bc1',
     'ETH': '0x',
-    'TRX': 'T',
-    'BNB': 'bnb1'
+    'TRX': 'T'
   };
   
   const prefix = prefixes[coin] || '0x';
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  
+  // Create a pseudo-HD address by combining main wallet, coin type, and order ID
+  const seed = `${mainWallet}${coin}${orderId || ''}`;
+  
+  // Simple hash-like function for demo purposes
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Generate address based on the hash
   let address = prefix;
   
-  // Generate random address with proper length for each coin type
-  const length = coin === 'BTC' ? 33 : 
-                 coin === 'ETH' ? 40 : 
-                 coin === 'TRX' ? 33 : 
-                 coin === 'BNB' ? 38 : 40;
-  
-  for (let i = 0; i < length; i++) {
-    address += chars.charAt(Math.floor(Math.random() * chars.length));
+  if (coin === 'ETH') {
+    // Ethereum addresses are 40 hex characters (42 with 0x prefix)
+    const hexChars = '0123456789abcdef';
+    for (let i = 0; i < 40; i++) {
+      const index = (hash + i) % hexChars.length;
+      address += hexChars.charAt(Math.abs(index));
+    }
+  } else {
+    // For other coins, use the original method
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    // Use the hash to generate a deterministic address
+    const length = coin === 'BTC' ? 42 : 
+                   coin === 'ETH' ? 40 : 
+                   coin === 'TRX' ? 34 : 40;
+    
+    for (let i = 0; i < length - prefix.length; i++) {
+      const index = (hash + i) % chars.length;
+      address += chars.charAt(Math.abs(index));
+    }
   }
   
   return address;
@@ -192,8 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const minAmounts = {
           'BTC': 0.0001,
           'ETH': 0.001,
-          'TRX': 10,
-          'BNB': 0.01
+          'TRX': 10
         };
         const minAmount = minAmounts[coin] || 0.001;
         sendAmountInput.min = minAmount;

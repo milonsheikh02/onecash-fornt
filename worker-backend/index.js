@@ -1,7 +1,10 @@
 // Cloudflare Worker for ONE⚡CASH Payment Processing
-// API Configuration
-const API_KEY = 'CQVCKV8-N9ZM00R-J1R4F3H-3WW8D8N';
-const WEBHOOK_URL = 'https://hook.eu2.make.com/3DGENEqiuxGMmYaB35alKsswjYlnIhlF';
+// Etherscan API Key (you'll need to get your own from etherscan.io)
+const ETHERSCAN_API_KEY = 'PGMJTCIY14W8IT81NYR557NIDDUUU9Z5C1';
+
+// Admin credentials (stored as secrets)
+let ADMIN_USERNAME = 'admin';
+let ADMIN_PASSWORD = 'password123';
 
 // CORS headers
 const corsHeaders = {
@@ -9,6 +12,39 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Max-Age': '86400',
+};
+
+// In-memory storage for orders (in production, use KV or D1)
+const orders = new Map();
+
+// In-memory storage for user balances (in production, use KV or D1)
+const userBalances = new Map();
+
+// In-memory storage for wallets (in production, use KV or D1)
+const wallets = new Map();
+
+// In-memory storage for transactions (in production, use KV or D1)
+const transactions = new Map();
+
+// In-memory storage for admin data
+const adminData = {
+  orders: [],
+  wallets: [],
+  transactions: []
+};
+
+// Exchange rates (in production, get from API)
+const exchangeRates = {
+  'BTC': 143491.50,  // 1 BTC = 143,491.50 USDT
+  'ETH': 4741.38,    // 1 ETH = 4,741.38 USDT
+  'TRX': 0.29548     // 1 TRX = 0.29548 USDT
+};
+
+// Supported trading pairs
+const supportedPairs = {
+  'BTC_TO_USDT': true,
+  'ETH_TO_USDT': true,
+  'TRX_TO_USDT': true
 };
 
 // Handle CORS preflight requests
@@ -34,23 +70,164 @@ function generateOrderId() {
   return 'ORD' + Date.now() + Math.random().toString(36).substr(2, 9).toUpperCase();
 }
 
-// Generate a payment address (in a real implementation, this would integrate with a payment service)
-function generatePaymentAddress(coin) {
-  // This is a mock implementation - in a real system, you would integrate with a crypto payment processor
+// Generate a unique user ID
+function generateUserId() {
+  return 'USER' + Date.now() + Math.random().toString(36).substr(2, 6).toUpperCase();
+}
+
+// Get user balance
+function getUserBalance(userId, currency) {
+  if (!userBalances.has(userId)) {
+    userBalances.set(userId, {});
+  }
+  
+  const balances = userBalances.get(userId);
+  return balances[currency] || 0;
+}
+
+// Update user balance
+function updateUserBalance(userId, currency, amount) {
+  if (!userBalances.has(userId)) {
+    userBalances.set(userId, {});
+  }
+  
+  const balances = userBalances.get(userId);
+  balances[currency] = (balances[currency] || 0) + amount;
+  
+  // Ensure no negative balances
+  if (balances[currency] < 0) {
+    balances[currency] = 0;
+  }
+  
+  userBalances.set(userId, balances);
+  return balances[currency];
+}
+
+// Perform internal swap (no blockchain transaction)
+function performInternalSwap(userId, fromCoin, fromAmount, toCoin, toAmount) {
+  // Deduct fromCoin from user balance
+  updateUserBalance(userId, fromCoin, -fromAmount);
+  
+  // Add toCoin to user balance
+  updateUserBalance(userId, toCoin, toAmount);
+  
+  return {
+    success: true,
+    fromCoin: fromCoin,
+    fromAmount: fromAmount,
+    toCoin: toCoin,
+    toAmount: toAmount,
+    userId: userId,
+    timestamp: new Date().toISOString()
+  };
+}
+
+// Check Tron transactions for a specific address
+async function checkTronTransactions(address) {
+  try {
+    // Using Tronscan API (free, no API key required for basic queries)
+    const url = `https://apilist.tronscan.org/api/transaction?address=${address}&limit=50`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    return data.data || [];
+  } catch (error) {
+    console.error('Error checking Tron transactions:', error);
+    return [];
+  }
+}
+
+// Check Bitcoin transactions for a specific address
+async function checkBitcoinTransactions(address) {
+  try {
+    // Using Blockchain.info API (free, no API key required)
+    const url = `https://blockchain.info/rawaddr/${address}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    return data.txs || [];
+  } catch (error) {
+    console.error('Error checking Bitcoin transactions:', error);
+    return [];
+  }
+}
+
+// Check Ethereum transactions for a specific address
+async function checkEthereumTransactions(address, startBlock = 0) {
+  try {
+    const url = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=${startBlock}&endblock=99999999&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.status === '1' && data.message === 'OK') {
+      return data.result || [];
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error checking Ethereum transactions:', error);
+    return [];
+  }
+}
+
+// Generate a payment address (HD wallet style - derived from main wallet)
+function generatePaymentAddress(coin, userId, orderId) {
+  // In a real implementation, this would use HD wallet derivation
+  // For this demo, we'll generate deterministic addresses based on main wallet + user ID
+  const mainWallets = {
+    'BTC': 'bc1qk263esw8mxpcmmml0mus7nfnscp9fryyqqzgwq',
+    'ETH': '0x2bb183CC12315a2acd0bfA89e815E1fC2C58815B',
+    'TRX': 'TUop15AqkgbB7uXjiHDp1XDpDfBJEQUB7w'
+  };
+  
+  const mainWallet = mainWallets[coin] || '0x0000000000000000000000000000000000000000';
+  
+  // Simple deterministic address generation (in production, use proper HD wallet derivation)
   const prefixes = {
-    'BTC': '1',
+    'BTC': 'bc1',
     'ETH': '0x',
-    'TRX': 'T',
-    'BNB': 'bnb1'
+    'TRX': 'T'
   };
   
   const prefix = prefixes[coin] || '0x';
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  
+  // Create a pseudo-HD address by combining main wallet, user ID, coin type, and order ID
+  // This is a simplified version - in production, use proper HD wallet libraries
+  const seed = `${mainWallet}${userId}${coin}${orderId || ''}`;
+  
+  // Simple hash-like function for demo purposes
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Generate address based on the hash
   let address = prefix;
   
-  // Generate random address
-  for (let i = 0; i < (coin === 'BTC' ? 33 : 40); i++) {
-    address += chars.charAt(Math.floor(Math.random() * chars.length));
+  if (coin === 'ETH') {
+    // Ethereum addresses are 40 hex characters (42 with 0x prefix)
+    const hexChars = '0123456789abcdef';
+    for (let i = 0; i < 40; i++) {
+      const index = (hash + i) % hexChars.length;
+      address += hexChars.charAt(Math.abs(index));
+    }
+  } else {
+    // For other coins, use the original method
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    // Use the hash to generate a deterministic address
+    const length = coin === 'BTC' ? 42 : 
+                   coin === 'ETH' ? 40 : 
+                   coin === 'TRX' ? 34 : 40;
+    
+    for (let i = 0; i < length - prefix.length; i++) {
+      const index = (hash + i) % chars.length;
+      address += chars.charAt(Math.abs(index));
+    }
   }
   
   return address;
@@ -72,40 +249,61 @@ async function createOrder(request) {
       });
     }
     
+    // Generate user ID if not provided
+    const userId = data.userId || generateUserId();
+    
     // Generate order ID and payment address
     const orderId = generateOrderId();
-    const paymentAddress = generatePaymentAddress(data.sendCoin);
+    const paymentAddress = generatePaymentAddress(data.sendCoin, userId, orderId);
+    
+    // Calculate USD value based on exchange rates
+    const exchangeRate = exchangeRates[data.sendCoin] || 50000;
+    const usdValue = parseFloat(data.sendAmount) * exchangeRate;
+    
+    // Determine receive coin from receive method
+    let receiveCoin = 'USDT';
+    if (data.receiveMethod.includes('TRC20')) {
+      receiveCoin = 'USDT_TRC20';
+    } else if (data.receiveMethod.includes('ERC20')) {
+      receiveCoin = 'USDT_ERC20';
+    }
     
     // Create order object
     const order = {
+      id: Date.now(), // Simple ID for demo
       order_id: orderId,
-      amount: parseFloat(data.sendAmount),
-      coin: data.sendCoin,
-      usd_value: parseFloat(data.sendAmount) * 50000, // Mock conversion - in real system, get from exchange rate API
-      receive_method: data.receiveMethod,
-      receive_wallet: data.receiveWallet,
-      payment_address: paymentAddress,
+      user_id: userId,
+      send_network: data.sendCoin,
+      receive_network: receiveCoin,
+      send_amount: parseFloat(data.sendAmount),
+      receive_amount: usdValue, // For simplicity, 1 USD = 1 USDT
+      deposit_address: paymentAddress,
       status: 'pending',
+      confirmations: 0,
+      tx_hash: '',
       created_at: new Date().toISOString(),
       expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes from now
     };
     
-    // In a real implementation, you would store this in a database
-    // For Cloudflare Workers, you could use KV storage or D1 database
+    // Store order in memory (in production, use KV or D1)
+    orders.set(orderId, order);
     
-    // Send webhook notification
-    try {
-      await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event: 'order_created',
-          order: order
-        })
-      });
-    } catch (webhookError) {
-      console.error('Webhook error:', webhookError);
-    }
+    // Add to admin data
+    adminData.orders.push({
+      id: order.id,
+      order_id: order.order_id,
+      send_network: order.send_network,
+      receive_network: order.receive_network,
+      send_amount: order.send_amount,
+      receive_amount: order.receive_amount,
+      deposit_address: order.deposit_address,
+      status: order.status,
+      confirmations: order.confirmations,
+      tx_hash: order.tx_hash,
+      created_at: order.created_at
+    });
+    
+    // No webhook notification (as requested)
     
     return new Response(JSON.stringify({
       success: true,
@@ -126,28 +324,23 @@ async function createOrder(request) {
 
 // Get order details
 async function getOrder(request, env, orderId) {
-  // In a real implementation, you would retrieve this from a database
-  // For this demo, we'll return a mock order
-  // In a production system, you would use env.ORDER_KV or env.DB to retrieve the order
-  
   try {
-    // Mock order data - in a real system, this would come from storage
-    const mockOrder = {
-      order_id: orderId,
-      amount: 0.1,
-      coin: 'BTC',
-      usd_value: 5000,
-      receive_method: 'USDT-TRC20',
-      receive_wallet: 'TABC1234567890XYZ',
-      payment_address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
-      status: 'pending', // This would be updated based on payment verification
-      created_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
-    };
+    // Retrieve order from storage
+    const order = orders.get(orderId);
+    
+    if (!order) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Order not found'
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
     
     return new Response(JSON.stringify({
       success: true,
-      order: mockOrder
+      order: order
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -167,22 +360,36 @@ async function updateOrderStatus(request, env, orderId) {
   try {
     const data = await request.json();
     
-    // In a real implementation, you would update the order in the database
-    // For this demo, we'll just return success
+    // Retrieve order from storage
+    const order = orders.get(orderId);
     
-    // Send webhook notification
-    try {
-      await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event: 'order_status_updated',
-          order_id: orderId,
-          status: data.status
-        })
+    if (!order) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Order not found'
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
-    } catch (webhookError) {
-      console.error('Webhook error:', webhookError);
+    }
+    
+    // Update order status
+    const oldStatus = order.status;
+    order.status = data.status;
+    orders.set(orderId, order);
+    
+    // If order is now paid, perform internal swap
+    if (oldStatus !== 'paid' && data.status === 'paid') {
+      // Perform internal swap (no blockchain transaction)
+      const swapResult = performInternalSwap(
+        order.user_id,
+        order.send_network,
+        order.send_amount,
+        order.receive_network,
+        order.receive_amount
+      );
+      
+      console.log('Internal swap performed:', swapResult);
     }
     
     return new Response(JSON.stringify({
@@ -230,6 +437,30 @@ export default {
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
+    } else if (request.method === 'GET' && path === '/test-swap') {
+      console.log('Matched GET /test-swap route');
+      
+      // Test internal swap
+      const testUserId = 'TEST_USER';
+      const initialBalance = getUserBalance(testUserId, 'BTC');
+      
+      // Perform a test swap
+      const swapResult = performInternalSwap(testUserId, 'BTC', 0.1, 'USDT', 5000);
+      
+      const finalBalance = {
+        BTC: getUserBalance(testUserId, 'BTC'),
+        USDT: getUserBalance(testUserId, 'USDT')
+      };
+      
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Test swap completed',
+        initialBalance: initialBalance,
+        swapResult: swapResult,
+        finalBalance: finalBalance
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     } else if (request.method === 'POST' && path === '/api/order') {
       console.log('Matched POST /api/order route');
       return createOrder(request);
@@ -243,6 +474,143 @@ export default {
       const orderId = pathParts[3];
       console.log('Matched PUT /api/order/ route, pathParts:', pathParts, 'orderId:', orderId);
       return updateOrderStatus(request, env, orderId);
+    } else if (request.method === 'GET' && path.startsWith('/api/user/')) {
+      // Get user balance
+      const pathParts = path.split('/');
+      const userId = pathParts[3];
+      console.log('Matched GET /api/user/ route, pathParts:', pathParts, 'userId:', userId);
+      
+      if (pathParts[4] === 'balance') {
+        const balances = userBalances.get(userId) || {};
+        return new Response(JSON.stringify({
+          success: true,
+          userId: userId,
+          balances: balances
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    } else if (request.method === 'GET' && path.startsWith('/api/check-payment/')) {
+      // Check payment for an order
+      const pathParts = path.split('/');
+      const orderId = pathParts[3];
+      console.log('Matched GET /api/check-payment/ route, pathParts:', pathParts, 'orderId:', orderId);
+      
+      const order = orders.get(orderId);
+      if (!order) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Order not found'
+        }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Check transactions for the payment address
+      let transactions = [];
+      if (order.send_network === 'BTC') {
+        transactions = await checkBitcoinTransactions(order.deposit_address);
+      } else if (order.send_network === 'ETH') {
+        transactions = await checkEthereumTransactions(order.deposit_address);
+      } else if (order.send_network === 'TRX') {
+        transactions = await checkTronTransactions(order.deposit_address);
+      }
+      
+      // Process transactions to find matching payments
+      const paymentInfo = {
+        orderId: orderId,
+        expectedAmount: order.send_amount,
+        receivedAmount: 0,
+        transactions: transactions.length,
+        status: 'pending'
+      };
+      
+      return new Response(JSON.stringify({
+        success: true,
+        paymentInfo: paymentInfo
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } else if (request.method === 'GET' && path === '/api/admin/data') {
+      // Admin endpoint to get all data - requires authentication
+      console.log('Matched GET /api/admin/data route');
+      
+      // Check authentication
+      const auth = request.headers.get('Authorization');
+      if (!auth || !auth.startsWith('Basic ')) {
+        return new Response('Unauthorized', {
+          status: 401,
+          headers: { 
+            ...corsHeaders, 
+            'WWW-Authenticate': 'Basic realm="Admin Panel"'
+          }
+        });
+      }
+      
+      // Decode basic auth
+      const credentials = atob(auth.split(' ')[1]);
+      const [username, password] = credentials.split(':');
+      
+      // Check credentials
+      const adminUsername = ADMIN_USERNAME;
+      const adminPassword = ADMIN_PASSWORD;
+      
+      if (username !== adminUsername || password !== adminPassword) {
+        return new Response('Unauthorized', {
+          status: 401,
+          headers: { 
+            ...corsHeaders, 
+            'WWW-Authenticate': 'Basic realm="Admin Panel"'
+          }
+        });
+      }
+      
+      return new Response(JSON.stringify({
+        success: true,
+        data: adminData
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } else if (request.method === 'GET' && path === '/admin') {
+      // Serve admin panel HTML - requires authentication
+      console.log('Matched GET /admin route');
+      
+      // Check authentication
+      const auth = request.headers.get('Authorization');
+      if (!auth || !auth.startsWith('Basic ')) {
+        return new Response('Unauthorized', {
+          status: 401,
+          headers: { 
+            ...corsHeaders, 
+            'WWW-Authenticate': 'Basic realm="Admin Panel"'
+          }
+        });
+      }
+      
+      // Decode basic auth
+      const credentials = atob(auth.split(' ')[1]);
+      const [username, password] = credentials.split(':');
+      
+      // Check credentials
+      const adminUsername = ADMIN_USERNAME;
+      const adminPassword = ADMIN_PASSWORD;
+      
+      if (username !== adminUsername || password !== adminPassword) {
+        return new Response('Unauthorized', {
+          status: 401,
+          headers: { 
+            ...corsHeaders, 
+            'WWW-Authenticate': 'Basic realm="Admin Panel"'
+          }
+        });
+      }
+      
+      // In a real implementation, you would serve the admin.html file
+      // For this demo, we'll return a simple response
+      return new Response('Admin panel endpoint - in production, this would serve the admin.html file', {
+        headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+      });
     } else {
       console.log('No route matched');
       return new Response(JSON.stringify({
