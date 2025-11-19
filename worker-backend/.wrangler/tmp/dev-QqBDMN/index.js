@@ -45,10 +45,10 @@ var adminData = {
   transactions: []
 };
 var exchangeRates = {
-  "BTC": 89,458.10,
-  // 1 BTC = 89,458.10 USDT
-  "ETH": 2,917.17,
-  // 1 ETH = 2,917.17 USDT
+  "BTC": 89,270.25,
+  // 1 BTC = 89,270.25 USDT
+  "ETH": 2,900.45
+  // 1 ETH = 2,900.45 USDT
   "TRX": 0.28210
   // 1 TRX = 0.28210 USDT
 };
