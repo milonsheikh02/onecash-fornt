@@ -2,9 +2,9 @@
 
 // Exchange rates (mock values - in a real system, these would come from an API)
 const exchangeRates = {
-  'BTC': 143491.50,  // 1 BTC = 143,491.50 USDT
-  'ETH': 4741.38,    // 1 ETH = 4,741.38 USDT
-  'TRX': 0.29548     // 1 TRX = 0.29548 USDT
+  'BTC': 89,458.10,  // 1 BTC = 89,458.10 USDT
+  'ETH': 2,917.17,    // 1 ETH = 2,917.17 USDT
+  'TRX': 0.28210    // 1 TRX = 0.28210 USDT
 };
 
 // DOM Elements
